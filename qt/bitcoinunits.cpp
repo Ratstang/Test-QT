@@ -1,6 +1,7 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2017 The PIVX developers
+// Copyright (c) 2015-2017 The PIVX developers	
+// Copyright (c) 2018 The Lobstex developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -19,18 +20,18 @@ BitcoinUnits::BitcoinUnits(QObject* parent) : QAbstractListModel(parent),
 QList<BitcoinUnits::Unit> BitcoinUnits::availableUnits()
 {
     QList<BitcoinUnits::Unit> unitlist;
-    unitlist.append(XGS);
-    unitlist.append(mXGS);
-    unitlist.append(uXGS);
+    unitlist.append(LOBS);
+    unitlist.append(mLOBS);
+    unitlist.append(uLOBS);
     return unitlist;
 }
 
 bool BitcoinUnits::valid(int unit)
 {
     switch (unit) {
-    case XGS:
-    case mXGS:
-    case uXGS:
+    case LOBS:
+    case mLOBS:
+    case uLOBS:
         return true;
     default:
         return false;
@@ -40,12 +41,12 @@ bool BitcoinUnits::valid(int unit)
 QString BitcoinUnits::id(int unit)
 {
     switch (unit) {
-    case XGS:
-        return QString("genesisx");
-    case mXGS:
-        return QString("mgenesisx");
-    case uXGS:
-        return QString::fromUtf8("ugenesisx");
+    case LOBS:
+        return QString("lobstex");
+    case mLOBS:
+        return QString("mlobstex");
+    case uLOBS:
+        return QString::fromUtf8("ulobstex");
     default:
         return QString("???");
     }
@@ -55,23 +56,23 @@ QString BitcoinUnits::name(int unit)
 {
     if (Params().NetworkID() == CBaseChainParams::MAIN) {
         switch (unit) {
-        case XGS:
-            return QString("XGS");
-        case mXGS:
-            return QString("mXGS");
-        case uXGS:
-            return QString::fromUtf8("μXGS");
+        case LOBS:
+            return QString("LOBS");
+        case mLOBS:
+            return QString("mLOBS");
+        case uLOBS:
+            return QString::fromUtf8("μLOBS");
         default:
             return QString("???");
         }
     } else {
         switch (unit) {
-        case XGS:
-            return QString("tXGS");
-        case mXGS:
-            return QString("mtXGS");
-        case uXGS:
-            return QString::fromUtf8("μtXGS");
+        case LOBS:
+            return QString("tLOBS");
+        case mLOBS:
+            return QString("mtLOBS");
+        case uLOBS:
+            return QString::fromUtf8("μtLOBS");
         default:
             return QString("???");
         }
@@ -82,23 +83,23 @@ QString BitcoinUnits::description(int unit)
 {
     if (Params().NetworkID() == CBaseChainParams::MAIN) {
         switch (unit) {
-        case XGS:
-            return QString("XGS");
-        case mXGS:
-            return QString("Milli-XGS (1 / 1" THIN_SP_UTF8 "000)");
-        case uXGS:
-            return QString("Micro-XGS (1 / 1" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
+        case LOBS:
+            return QString("LOBS");
+        case mLOBS:
+            return QString("Milli-LOBS (1 / 1" THIN_SP_UTF8 "000)");
+        case uLOBS:
+            return QString("Micro-LOBS (1 / 1" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
         default:
             return QString("???");
         }
     } else {
         switch (unit) {
-        case XGS:
-            return QString("TestXGSs");
-        case mXGS:
-            return QString("Milli-TestXGS (1 / 1" THIN_SP_UTF8 "000)");
-        case uXGS:
-            return QString("Micro-TestXGS (1 / 1" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
+        case LOBS:
+            return QString("TestLOBSs");
+        case mLOBS:
+            return QString("Milli-TestLOBS (1 / 1" THIN_SP_UTF8 "000)");
+        case uLOBS:
+            return QString("Micro-TestLOBS (1 / 1" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
         default:
             return QString("???");
         }
@@ -108,11 +109,11 @@ QString BitcoinUnits::description(int unit)
 qint64 BitcoinUnits::factor(int unit)
 {
     switch (unit) {
-    case XGS:
+    case LOBS:
         return 100000000;
-    case mXGS:
+    case mLOBS:
         return 100000;
-    case uXGS:
+    case uLOBS:
         return 100;
     default:
         return 100000000;
@@ -122,11 +123,11 @@ qint64 BitcoinUnits::factor(int unit)
 int BitcoinUnits::decimals(int unit)
 {
     switch (unit) {
-    case XGS:
+    case LOBS:
         return 8;
-    case mXGS:
+    case mLOBS:
         return 5;
-    case uXGS:
+    case uLOBS:
         return 2;
     default:
         return 0;

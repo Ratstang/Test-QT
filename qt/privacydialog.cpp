@@ -14,8 +14,9 @@
 #include "sendcoinsentry.h"
 #include "walletmodel.h"
 #include "coincontrol.h"
-#include "zgenesisxcontroldialog.h"
+#include "zlobscontroldialog.h"
 #include "spork.h"
+#include "askpassphrasedialog.h"
 
 #include <QClipboard>
 #include <QSettings>
@@ -30,14 +31,14 @@ PrivacyDialog::PrivacyDialog(QWidget* parent) : QDialog(parent),
     nDisplayUnit = 0; // just make sure it's not unitialized
     ui->setupUi(this);
 
-    // "Spending 999999 zXGS ought to be enough for anybody." - Bill Gates, 2017
-    ui->zXGSpayAmount->setValidator( new QDoubleValidator(0.0, 21000000.0, 20, this) );
+    // "Spending 999999 zLOBS ought to be enough for anybody." - Bill Gates, 2017
+    ui->zLOBSpayAmount->setValidator( new QDoubleValidator(0.0, 21000000.0, 20, this) );
     ui->labelMintAmountValue->setValidator( new QIntValidator(0, 999999, this) );
 
     // Default texts for (mini-) coincontrol
     ui->labelCoinControlQuantity->setText (tr("Coins automatically selected"));
     ui->labelCoinControlAmount->setText (tr("Coins automatically selected"));
-    ui->labelzXGSSyncStatus->setText("(" + tr("out of sync") + ")");
+    ui->labelzLOBSSyncStatus->setText("(" + tr("out of sync") + ")");
 
     // Sunken frame for minting messages
     ui->TEMintStatus->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
@@ -57,16 +58,29 @@ PrivacyDialog::PrivacyDialog(QWidget* parent) : QDialog(parent),
     ui->labelCoinControlAmount->addAction(clipboardAmountAction);
 
     // Denomination labels
-    ui->labelzDenom1Text->setText("Denom. with value <b>1</b>:");
-    ui->labelzDenom2Text->setText("Denom. with value <b>5</b>:");
-    ui->labelzDenom3Text->setText("Denom. with value <b>10</b>:");
-    ui->labelzDenom4Text->setText("Denom. with value <b>50</b>:");
-    ui->labelzDenom5Text->setText("Denom. with value <b>100</b>:");
-    ui->labelzDenom6Text->setText("Denom. with value <b>500</b>:");
-    ui->labelzDenom7Text->setText("Denom. with value <b>1000</b>:");
-    ui->labelzDenom8Text->setText("Denom. with value <b>5000</b>:");
+    ui->labelzDenom1Text->setText(tr("Denom. with value <b>1</b>:"));
+    ui->labelzDenom2Text->setText(tr("Denom. with value <b>5</b>:"));
+    ui->labelzDenom3Text->setText(tr("Denom. with value <b>10</b>:"));
+    ui->labelzDenom4Text->setText(tr("Denom. with value <b>50</b>:"));
+    ui->labelzDenom5Text->setText(tr("Denom. with value <b>100</b>:"));
+    ui->labelzDenom6Text->setText(tr("Denom. with value <b>500</b>:"));
+    ui->labelzDenom7Text->setText(tr("Denom. with value <b>1000</b>:"));
+    ui->labelzDenom8Text->setText(tr("Denom. with value <b>5000</b>:"));
 
-    // GenesisX settings
+    // AutoMint status
+    ui->label_AutoMintStatus->setText(tr("AutoMint Status:"));
+
+    // Global Supply labels
+    ui->labelZsupplyText1->setText(tr("Denom. <b>1</b>:"));
+    ui->labelZsupplyText5->setText(tr("Denom. <b>5</b>:"));
+    ui->labelZsupplyText10->setText(tr("Denom. <b>10</b>:"));
+    ui->labelZsupplyText50->setText(tr("Denom. <b>50</b>:"));
+    ui->labelZsupplyText100->setText(tr("Denom. <b>100</b>:"));
+    ui->labelZsupplyText500->setText(tr("Denom. <b>500</b>:"));
+    ui->labelZsupplyText1000->setText(tr("Denom. <b>1000</b>:"));
+    ui->labelZsupplyText5000->setText(tr("Denom. <b>5000</b>:"));
+    
+    // Lobstex settings
     QSettings settings;
     if (!settings.contains("nSecurityLevel")){
         nSecurityLevel = 42;
@@ -94,11 +108,11 @@ PrivacyDialog::PrivacyDialog(QWidget* parent) : QDialog(parent),
 
     //temporary disable for maintenance
     if(GetAdjustedTime() > GetSporkValue(SPORK_16_ZEROCOIN_MAINTENANCE_MODE)) {
-        ui->pushButtonMintzXGS->setEnabled(false);
-        ui->pushButtonMintzXGS->setToolTip(tr("zXGS is currently disabled due to maintenance."));
+        ui->pushButtonMintzLOBS->setEnabled(false);
+        ui->pushButtonMintzLOBS->setToolTip(tr("zLOBS is currently disabled due to maintenance."));
 
-        ui->pushButtonSpendzXGS->setEnabled(false);
-        ui->pushButtonSpendzXGS->setToolTip(tr("zXGS is currently disabled due to maintenance."));
+        ui->pushButtonSpendzLOBS->setEnabled(false);
+        ui->pushButtonSpendzLOBS->setToolTip(tr("zLOBS is currently disabled due to maintenance."));
     }
 }
 
@@ -131,24 +145,25 @@ void PrivacyDialog::on_pasteButton_clicked()
 
 void PrivacyDialog::on_addressBookButton_clicked()
 {
-    if (!walletModel)
+    if (!walletModel || !walletModel->getOptionsModel())
         return;
+
     AddressBookPage dlg(AddressBookPage::ForSelection, AddressBookPage::SendingTab, this);
     dlg.setModel(walletModel->getAddressTableModel());
     if (dlg.exec()) {
         ui->payTo->setText(dlg.getReturnValue());
-        ui->zXGSpayAmount->setFocus();
+        ui->zLOBSpayAmount->setFocus();
     }
 }
 
-void PrivacyDialog::on_pushButtonMintzXGS_clicked()
+void PrivacyDialog::on_pushButtonMintzLOBS_clicked()
 {
     if (!walletModel || !walletModel->getOptionsModel())
         return;
 
     if(GetAdjustedTime() > GetSporkValue(SPORK_16_ZEROCOIN_MAINTENANCE_MODE)) {
         QMessageBox::information(this, tr("Mint Zerocoin"),
-                                 tr("zXGS is currently undergoing maintenance."), QMessageBox::Ok,
+                                 tr("zLOBS is currently undergoing maintenance."), QMessageBox::Ok,
                                  QMessageBox::Ok);
         return;
     }
@@ -159,7 +174,7 @@ void PrivacyDialog::on_pushButtonMintzXGS_clicked()
     // Request unlock if wallet was locked or unlocked for mixing:
     WalletModel::EncryptionStatus encStatus = walletModel->getEncryptionStatus();
     if (encStatus == walletModel->Locked) {
-        WalletModel::UnlockContext ctx(walletModel->requestUnlock(true));
+        WalletModel::UnlockContext ctx(walletModel->requestUnlock(AskPassphraseDialog::Context::Mint_zLOBS, true));
         if (!ctx.isValid()) {
             // Unlock wallet was cancelled
             ui->TEMintStatus->setPlainText(tr("Error: Your wallet is locked. Please enter the wallet passphrase first."));
@@ -176,7 +191,7 @@ void PrivacyDialog::on_pushButtonMintzXGS_clicked()
         return;
     }
 
-    ui->TEMintStatus->setPlainText(tr("Minting ") + ui->labelMintAmountValue->text() + " zXGS...");
+    ui->TEMintStatus->setPlainText(tr("Minting ") + ui->labelMintAmountValue->text() + " zLOBS...");
     ui->TEMintStatus->repaint ();
 
     int64_t nTime = GetTimeMillis();
@@ -194,7 +209,7 @@ void PrivacyDialog::on_pushButtonMintzXGS_clicked()
     double fDuration = (double)(GetTimeMillis() - nTime)/1000.0;
 
     // Minting successfully finished. Show some stats for entertainment.
-    QString strStatsHeader = tr("Successfully minted ") + ui->labelMintAmountValue->text() + tr(" zXGS in ") +
+    QString strStatsHeader = tr("Successfully minted ") + ui->labelMintAmountValue->text() + tr(" zLOBS in ") +
                              QString::number(fDuration) + tr(" sec. Used denominations:\n");
 
     // Clear amount to avoid double spending when accidentally clicking twice
@@ -211,6 +226,8 @@ void PrivacyDialog::on_pushButtonMintzXGS_clicked()
 
     }
 
+    ui->TEMintStatus->verticalScrollBar()->setValue(ui->TEMintStatus->verticalScrollBar()->maximum()); // Automatically scroll to end of text
+
     // Available balance isn't always updated, so force it.
     setBalance(walletModel->getBalance(), walletModel->getUnconfirmedBalance(), walletModel->getImmatureBalance(),
                walletModel->getZerocoinBalance(), walletModel->getUnconfirmedZerocoinBalance(), walletModel->getImmatureZerocoinBalance(),
@@ -222,9 +239,6 @@ void PrivacyDialog::on_pushButtonMintzXGS_clicked()
 
 void PrivacyDialog::on_pushButtonMintReset_clicked()
 {
-    if (!walletModel || !walletModel->getOptionsModel())
-        return;
-
     ui->TEMintStatus->setPlainText(tr("Starting ResetMintZerocoin: rescanning complete blockchain, this will need up to 30 minutes depending on your hardware. \nPlease be patient..."));
     ui->TEMintStatus->repaint ();
 
@@ -233,15 +247,13 @@ void PrivacyDialog::on_pushButtonMintReset_clicked()
     double fDuration = (double)(GetTimeMillis() - nTime)/1000.0;
     ui->TEMintStatus->setPlainText(QString::fromStdString(strResetMintResult) + tr("Duration: ") + QString::number(fDuration) + tr(" sec.\n"));
     ui->TEMintStatus->repaint ();
+    ui->TEMintStatus->verticalScrollBar()->setValue(ui->TEMintStatus->verticalScrollBar()->maximum()); // Automatically scroll to end of text
 
     return;
 }
 
 void PrivacyDialog::on_pushButtonSpentReset_clicked()
 {
-    if (!walletModel || !walletModel->getOptionsModel())
-        return;
-
     ui->TEMintStatus->setPlainText(tr("Starting ResetSpentZerocoin: "));
     ui->TEMintStatus->repaint ();
     int64_t nTime = GetTimeMillis();
@@ -249,11 +261,12 @@ void PrivacyDialog::on_pushButtonSpentReset_clicked()
     double fDuration = (double)(GetTimeMillis() - nTime)/1000.0;
     ui->TEMintStatus->setPlainText(QString::fromStdString(strResetSpentResult) + tr("Duration: ") + QString::number(fDuration) + tr(" sec.\n"));
     ui->TEMintStatus->repaint ();
+    ui->TEMintStatus->verticalScrollBar()->setValue(ui->TEMintStatus->verticalScrollBar()->maximum()); // Automatically scroll to end of text
 
     return;
 }
 
-void PrivacyDialog::on_pushButtonSpendzXGS_clicked()
+void PrivacyDialog::on_pushButtonSpendzLOBS_clicked()
 {
 
     if (!walletModel || !walletModel->getOptionsModel() || !pwalletMain)
@@ -261,36 +274,39 @@ void PrivacyDialog::on_pushButtonSpendzXGS_clicked()
 
     if(GetAdjustedTime() > GetSporkValue(SPORK_16_ZEROCOIN_MAINTENANCE_MODE)) {
         QMessageBox::information(this, tr("Mint Zerocoin"),
-                                 tr("zXGS is currently undergoing maintenance."), QMessageBox::Ok, QMessageBox::Ok);
+                                 tr("zLOBS is currently undergoing maintenance."), QMessageBox::Ok, QMessageBox::Ok);
         return;
     }
 
     // Request unlock if wallet was locked or unlocked for mixing:
     WalletModel::EncryptionStatus encStatus = walletModel->getEncryptionStatus();
     if (encStatus == walletModel->Locked || encStatus == walletModel->UnlockedForAnonymizationOnly) {
-        WalletModel::UnlockContext ctx(walletModel->requestUnlock(true));
+        WalletModel::UnlockContext ctx(walletModel->requestUnlock(AskPassphraseDialog::Context::Send_zLOBS, true));
         if (!ctx.isValid()) {
             // Unlock wallet was cancelled
             return;
         }
-        // Wallet is unlocked now, sedn zXGS
-        sendzXGS();
+        // Wallet is unlocked now, sedn zLOBS
+        sendzLOBS();
         return;
     }
-    // Wallet already unlocked or not encrypted at all, send zXGS
-    sendzXGS();
+    // Wallet already unlocked or not encrypted at all, send zLOBS
+    sendzLOBS();
 }
 
-void PrivacyDialog::on_pushButtonZGenesisXControl_clicked()
+void PrivacyDialog::on_pushButtonZLOBSControl_clicked()
 {
-    ZGenesisXControlDialog* zGenesisXControl = new ZGenesisXControlDialog(this);
-    zGenesisXControl->setModel(walletModel);
-    zGenesisXControl->exec();
+    if (!walletModel || !walletModel->getOptionsModel())
+        return;
+
+    ZLOBSControlDialog* zLOBSControl = new ZLOBSControlDialog(this);
+    zLOBSControl->setModel(walletModel);
+    zLOBSControl->exec();
 }
 
-void PrivacyDialog::setZGenesisXControlLabels(int64_t nAmount, int nQuantity)
+void PrivacyDialog::setZLOBSControlLabels(int64_t nAmount, int nQuantity)
 {
-    ui->labelzGenesisXSelected_int->setText(QString::number(nAmount));
+    ui->labelzLOBSSelected_int->setText(QString::number(nAmount));
     ui->labelQuantitySelected_int->setText(QString::number(nQuantity));
 }
 
@@ -299,7 +315,7 @@ static inline int64_t roundint64(double d)
     return (int64_t)(d > 0 ? d + 0.5 : d - 0.5);
 }
 
-void PrivacyDialog::sendzXGS()
+void PrivacyDialog::sendzLOBS()
 {
     QSettings settings;
 
@@ -310,31 +326,31 @@ void PrivacyDialog::sendzXGS()
     }
     else{
         if (!address.IsValid()) {
-            QMessageBox::warning(this, tr("Spend Zerocoin"), tr("Invalid GenesisX Address"), QMessageBox::Ok, QMessageBox::Ok);
+            QMessageBox::warning(this, tr("Spend Zerocoin"), tr("Invalid Lobstex Address"), QMessageBox::Ok, QMessageBox::Ok);
             ui->payTo->setFocus();
             return;
         }
     }
 
     // Double is allowed now
-    double dAmount = ui->zXGSpayAmount->text().toDouble();
+    double dAmount = ui->zLOBSpayAmount->text().toDouble();
     CAmount nAmount = roundint64(dAmount* COIN);
 
     // Check amount validity
     if (!MoneyRange(nAmount) || nAmount <= 0.0) {
         QMessageBox::warning(this, tr("Spend Zerocoin"), tr("Invalid Send Amount"), QMessageBox::Ok, QMessageBox::Ok);
-        ui->zXGSpayAmount->setFocus();
+        ui->zLOBSpayAmount->setFocus();
         return;
     }
 
-    // Convert change to zXGS
+    // Convert change to zLOBS
     bool fMintChange = ui->checkBoxMintChange->isChecked();
 
     // Persist minimize change setting
     fMinimizeChange = ui->checkBoxMinimizeChange->isChecked();
     settings.setValue("fMinimizeChange", fMinimizeChange);
 
-    // Warn for additional fees if amount is not an integer and change as zXGS is requested
+    // Warn for additional fees if amount is not an integer and change as zLOBS is requested
     bool fWholeNumber = floor(dAmount) == dAmount;
     double dzFee = 0.0;
 
@@ -343,7 +359,7 @@ void PrivacyDialog::sendzXGS()
 
     if(!fWholeNumber && fMintChange){
         QString strFeeWarning = "You've entered an amount with fractional digits and want the change to be converted to Zerocoin.<br /><br /><b>";
-        strFeeWarning += QString::number(dzFee, 'f', 8) + " XGS </b>will be added to the standard transaction fees!<br />";
+        strFeeWarning += QString::number(dzFee, 'f', 8) + " LOBS </b>will be added to the standard transaction fees!<br />";
         QMessageBox::StandardButton retval = QMessageBox::question(this, tr("Confirm additional Fees"),
             strFeeWarning,
             QMessageBox::Yes | QMessageBox::Cancel,
@@ -351,7 +367,7 @@ void PrivacyDialog::sendzXGS()
 
         if (retval != QMessageBox::Yes) {
             // Sending canceled
-            ui->zXGSpayAmount->setFocus();
+            ui->zLOBSpayAmount->setFocus();
             return;
         }
     }
@@ -370,7 +386,7 @@ void PrivacyDialog::sendzXGS()
 
     // General info
     QString strQuestionString = tr("Are you sure you want to send?<br /><br />");
-    QString strAmount = "<b>" + QString::number(dAmount, 'f', 8) + " zXGS</b>";
+    QString strAmount = "<b>" + QString::number(dAmount, 'f', 8) + " zLOBS</b>";
     QString strAddress = tr(" to address ") + QString::fromStdString(address.ToString()) + strAddressLabel + " <br />";
 
     if(ui->payTo->text().isEmpty()){
@@ -396,13 +412,13 @@ void PrivacyDialog::sendzXGS()
     ui->TEMintStatus->setPlainText(tr("Spending Zerocoin.\nComputationally expensive, might need several minutes depending on the selected Security Level and your hardware. \nPlease be patient..."));
     ui->TEMintStatus->repaint();
 
-    // use mints from zGenesisX selector if applicable
+    // use mints from zLOBS selector if applicable
     vector<CZerocoinMint> vMintsSelected;
-    if (!ZGenesisXControlDialog::listSelectedMints.empty()) {
-        vMintsSelected = ZGenesisXControlDialog::GetSelectedMints();
+    if (!ZLOBSControlDialog::listSelectedMints.empty()) {
+        vMintsSelected = ZLOBSControlDialog::GetSelectedMints();
     }
 
-    // Spend zXGS
+    // Spend zLOBS
     CWalletTx wtxNew;
     CZerocoinSpendReceipt receipt;
     bool fSuccess = false;
@@ -418,7 +434,7 @@ void PrivacyDialog::sendzXGS()
     // Display errors during spend
     if (!fSuccess) {
         int nNeededSpends = receipt.GetNeededSpends(); // Number of spends we would need for this transaction
-        const int nMaxSpends = Params().Zerocoin_MaxSpendsPerTransaction(); // Maximum possible spends for one zXGS transaction
+        const int nMaxSpends = Params().Zerocoin_MaxSpendsPerTransaction(); // Maximum possible spends for one zLOBS transaction
         if (nNeededSpends > nMaxSpends) {
             QString strStatusMessage = tr("Too much inputs (") + QString::number(nNeededSpends, 10) + tr(") needed. \nMaximum allowed: ") + QString::number(nMaxSpends, 10);
             strStatusMessage += tr("\nEither mint higher denominations (so fewer inputs are needed) or reduce the amount to spend.");
@@ -429,20 +445,32 @@ void PrivacyDialog::sendzXGS()
             QMessageBox::warning(this, tr("Spend Zerocoin"), receipt.GetStatusMessage().c_str(), QMessageBox::Ok, QMessageBox::Ok);
             ui->TEMintStatus->setPlainText(tr("Spend Zerocoin failed with status = ") +QString::number(receipt.GetStatus(), 10) + "\n" + "Message: " + QString::fromStdString(receipt.GetStatusMessage()));
         }
-        ui->zXGSpayAmount->setFocus();
+        ui->zLOBSpayAmount->setFocus();
         ui->TEMintStatus->repaint();
+        ui->TEMintStatus->verticalScrollBar()->setValue(ui->TEMintStatus->verticalScrollBar()->maximum()); // Automatically scroll to end of text
         return;
     }
 
-    // Clear zgenesisx selector in case it was used
-    ZGenesisXControlDialog::listSelectedMints.clear();
+    if (walletModel && walletModel->getAddressTableModel()) {
+        // If zLOBS was spent successfully update the addressbook with the label
+        std::string labelText = ui->addAsLabel->text().toStdString();
+        if (!labelText.empty())
+            walletModel->updateAddressBookLabels(address.Get(), labelText, "send");
+        else
+            walletModel->updateAddressBookLabels(address.Get(), "(no label)", "send");
+    }
+
+    // Clear zlobs selector in case it was used
+    ZLOBSControlDialog::listSelectedMints.clear();
+    ui->labelzLOBSSelected_int->setText(QString("0"));
+    ui->labelQuantitySelected_int->setText(QString("0"));
 
     // Some statistics for entertainment
     QString strStats = "";
     CAmount nValueIn = 0;
     int nCount = 0;
     for (CZerocoinSpend spend : receipt.GetSpends()) {
-        strStats += tr("zGenesisX Spend #: ") + QString::number(nCount) + ", ";
+        strStats += tr("zLOBS Spend #: ") + QString::number(nCount) + ", ";
         strStats += tr("denomination: ") + QString::number(spend.GetDenomination()) + ", ";
         strStats += tr("serial: ") + spend.GetSerial().ToString().c_str() + "\n";
         strStats += tr("Spend is 1 of : ") + QString::number(spend.GetMintCount()) + " mints in the accumulator\n";
@@ -451,13 +479,13 @@ void PrivacyDialog::sendzXGS()
 
     CAmount nValueOut = 0;
     for (const CTxOut& txout: wtxNew.vout) {
-        strStats += tr("value out: ") + FormatMoney(txout.nValue).c_str() + " GenesisX, ";
+        strStats += tr("value out: ") + FormatMoney(txout.nValue).c_str() + " LOBS, ";
         nValueOut += txout.nValue;
 
         strStats += tr("address: ");
         CTxDestination dest;
         if(txout.scriptPubKey.IsZerocoinMint())
-            strStats += tr("zGenesisX Mint");
+            strStats += tr("zLOBS Mint");
         else if(ExtractDestination(txout.scriptPubKey, dest))
             strStats += tr(CBitcoinAddress(dest).ToString().c_str());
         strStats += "\n";
@@ -472,10 +500,11 @@ void PrivacyDialog::sendzXGS()
     strReturn += strStats;
 
     // Clear amount to avoid double spending when accidentally clicking twice
-    ui->zXGSpayAmount->setText ("0");
+    ui->zLOBSpayAmount->setText ("0");
 
     ui->TEMintStatus->setPlainText(strReturn);
     ui->TEMintStatus->repaint();
+    ui->TEMintStatus->verticalScrollBar()->setValue(ui->TEMintStatus->verticalScrollBar()->maximum()); // Automatically scroll to end of text
 }
 
 void PrivacyDialog::on_payTo_textChanged(const QString& address)
@@ -498,6 +527,9 @@ void PrivacyDialog::coinControlClipboardAmount()
 // Coin Control: button inputs -> show actual coin control dialog
 void PrivacyDialog::coinControlButtonClicked()
 {
+    if (!walletModel || !walletModel->getOptionsModel())
+        return;
+
     CoinControlDialog dlg;
     dlg.setModel(walletModel);
     dlg.exec();
@@ -574,7 +606,7 @@ void PrivacyDialog::setBalance(const CAmount& balance, const CAmount& unconfirme
             mapUnconfirmed.at(mint.GetDenomination())++;
         }
         else {
-            // After a denomination is confirmed it might still be immature because < 1 of the same denomination were minted after it
+            // After a denomination is confirmed it might still be immature because < 3 of the same denomination were minted after it
             CBlockIndex *pindex = chainActive[mint.GetHeight() + 1];
             int nHeight2CheckpointsDeep = nBestHeight - (nBestHeight % 10) - 20;
             int nMintsAdded = 0;
@@ -616,7 +648,7 @@ void PrivacyDialog::setBalance(const CAmount& balance, const CAmount& unconfirme
 
         strDenomStats = strUnconfirmed + QString::number(mapDenomBalances.at(denom)) + " x " +
                         QString::number(nCoins) + " = <b>" +
-                        QString::number(nSumPerCoin) + " zXGS </b>";
+                        QString::number(nSumPerCoin) + " zLOBS </b>";
 
         switch (nCoins) {
             case libzerocoin::CoinDenomination::ZQ_ONE:
@@ -654,9 +686,59 @@ void PrivacyDialog::setBalance(const CAmount& balance, const CAmount& unconfirme
         nLockedBalance = walletModel->getLockedBalance();
     }
 
-    ui->labelzAvailableAmount->setText(QString::number(zerocoinBalance/COIN) + QString(" zXGS "));
-    ui->labelzAvailableAmount_2->setText(QString::number(matureZerocoinBalance/COIN) + QString(" zXGS "));
-    ui->labelzXGSAmountValue->setText(BitcoinUnits::floorHtmlWithUnit(nDisplayUnit, balance - immatureBalance - nLockedBalance, false, BitcoinUnits::separatorAlways));
+    ui->labelzAvailableAmount->setText(QString::number(zerocoinBalance/COIN) + QString(" zLOBS "));
+    ui->labelzAvailableAmount_2->setText(QString::number(matureZerocoinBalance/COIN) + QString(" zLOBS "));
+    ui->labelzLOBSAmountValue->setText(BitcoinUnits::floorHtmlWithUnit(nDisplayUnit, balance - immatureBalance - nLockedBalance, false, BitcoinUnits::separatorAlways));
+
+    // Display AutoMint status
+    QString strAutomintStatus = tr("AutoMint Status:");
+
+    if (pwalletMain->isZeromintEnabled ()) {
+       strAutomintStatus += tr(" <b>enabled</b>.");
+    }
+    else {
+       strAutomintStatus += tr(" <b>disabled</b>.");
+    }
+
+    strAutomintStatus += tr(" Configured target percentage: <b>") + QString::number(pwalletMain->getZeromintPercentage()) + "%</b>";
+    ui->label_AutoMintStatus->setText(strAutomintStatus);
+
+    // Display global supply
+    ui->labelZsupplyAmount->setText(QString::number(chainActive.Tip()->GetZerocoinSupply()/COIN) + QString(" <b>zLOBS </b> "));
+    for (auto denom : libzerocoin::zerocoinDenomList) {
+        int64_t nSupply = chainActive.Tip()->mapZerocoinSupply.at(denom);
+        QString strSupply = QString::number(nSupply) + " x " + QString::number(denom) + " = <b>" +
+                            QString::number(nSupply*denom) + " zLOBS </b> ";
+        switch (denom) {
+            case libzerocoin::CoinDenomination::ZQ_ONE:
+                ui->labelZsupplyAmount1->setText(strSupply);
+                break;
+            case libzerocoin::CoinDenomination::ZQ_FIVE:
+                ui->labelZsupplyAmount5->setText(strSupply);
+                break;
+            case libzerocoin::CoinDenomination::ZQ_TEN:
+                ui->labelZsupplyAmount10->setText(strSupply);
+                break;
+            case libzerocoin::CoinDenomination::ZQ_FIFTY:
+                ui->labelZsupplyAmount50->setText(strSupply);
+                break;
+            case libzerocoin::CoinDenomination::ZQ_ONE_HUNDRED:
+                ui->labelZsupplyAmount100->setText(strSupply);
+                break;
+            case libzerocoin::CoinDenomination::ZQ_FIVE_HUNDRED:
+                ui->labelZsupplyAmount500->setText(strSupply);
+                break;
+            case libzerocoin::CoinDenomination::ZQ_ONE_THOUSAND:
+                ui->labelZsupplyAmount1000->setText(strSupply);
+                break;
+            case libzerocoin::CoinDenomination::ZQ_FIVE_THOUSAND:
+                ui->labelZsupplyAmount5000->setText(strSupply);
+                break;
+            default:
+                // Error Case: don't update display
+                break;
+        }
+    }
 }
 
 void PrivacyDialog::updateDisplayUnit()
@@ -672,7 +754,7 @@ void PrivacyDialog::updateDisplayUnit()
 
 void PrivacyDialog::showOutOfSyncWarning(bool fShow)
 {
-    ui->labelzXGSSyncStatus->setVisible(fShow);
+    ui->labelzLOBSSyncStatus->setVisible(fShow);
 }
 
 void PrivacyDialog::keyPressEvent(QKeyEvent* event)

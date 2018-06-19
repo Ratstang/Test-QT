@@ -1,12 +1,12 @@
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2017 The PIVX developers
-// Copyright (c) 2017 The GenesisX developers
+// Copyright (c) 2015-2017 The PIVX developers	
+// Copyright (c) 2018 The Lobstex developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #if defined(HAVE_CONFIG_H)
-#include "config/genesisx-config.h"
+#include "config/lobstex-config.h"
 #endif
 
 #include "util.h"
@@ -19,6 +19,8 @@
 #include <QCoreApplication>
 #include <QObject>
 #include <QTest>
+
+#include <openssl/ssl.h>
 
 #if defined(QT_STATICPLUGIN) && QT_VERSION < 0x050000
 #include <QtPlugin>
@@ -37,7 +39,9 @@ int main(int argc, char *argv[])
     // Don't remove this, it's needed to access
     // QCoreApplication:: in the tests
     QCoreApplication app(argc, argv);
-    app.setApplicationName("GenesisX-Qt-test");
+    app.setApplicationName("Lobstex-Qt-test");
+
+    SSL_library_init();
 
     URITests test1;
     if (QTest::qExec(&test1) != 0)

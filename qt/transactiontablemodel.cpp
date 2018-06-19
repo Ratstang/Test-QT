@@ -85,6 +85,7 @@ public:
 
     /* Update our model of the wallet incrementally, to synchronize our model of the wallet
        with that of the core.
+
        Call with transaction that was added, removed or changed.
      */
     void updateWallet(const uint256& hash, int status, bool showTransaction)
@@ -355,15 +356,15 @@ QString TransactionTableModel::formatTxType(const TransactionRecord* wtx) const
     case TransactionRecord::Obfuscated:
         return tr("Obfuscated");
     case TransactionRecord::ZerocoinMint:
-        return tr("Converted GenesisX to zGenesisX");
+        return tr("Converted LOBS to zLOBS");
     case TransactionRecord::ZerocoinSpend:
-        return tr("Spent zGenesisX");
+        return tr("Spent zLOBS");
     case TransactionRecord::RecvFromZerocoinSpend:
-        return tr("Received GenesisX from zGenesisX");
-    case TransactionRecord::ZerocoinSpend_Change_zGenesisX:
-        return tr("Minted Change as zGenesisX from zGenesisX Spend");
+        return tr("Received LOBS from zLOBS");
+    case TransactionRecord::ZerocoinSpend_Change_zLOBS:
+        return tr("Minted Change as zLOBS from zLOBS Spend");
     case TransactionRecord::ZerocoinSpend_FromMe:
-        return tr("Converted zGenesisX to GenesisX");
+        return tr("Converted zLOBS to LOBS");
 
     default:
         return QString();
@@ -417,8 +418,8 @@ QString TransactionTableModel::formatTxToAddress(const TransactionRecord* wtx, b
     case TransactionRecord::SendToOther:
         return QString::fromStdString(wtx->address) + watchAddress;
     case TransactionRecord::ZerocoinMint:
-    case TransactionRecord::ZerocoinSpend_Change_zGenesisX:
-        return tr("zGenesisX Accumulator");
+    case TransactionRecord::ZerocoinSpend_Change_zLOBS:
+        return tr("zLOBS Accumulator");
     case TransactionRecord::SendToSelf:
     default:
         return tr("(n/a)") + watchAddress;
@@ -566,8 +567,12 @@ QVariant TransactionTableModel::data(const QModelIndex& index, int role) const
     case Qt::TextAlignmentRole:
         return column_alignments[index.column()];
     case Qt::ForegroundRole:
-        // Non-confirmed (but not immature) as transactions are grey
-        if (!rec->status.countsForBalance && rec->status.status != TransactionStatus::Immature) {
+        // Conflicted, most probably orphaned
+        if (rec->status.status == TransactionStatus::Conflicted || rec->status.status == TransactionStatus::NotAccepted) {
+            return COLOR_CONFLICTED;
+        }
+        // Unconfimed or immature
+        if ((rec->status.status == TransactionStatus::Unconfirmed) || (rec->status.status == TransactionStatus::Immature)) {
             return COLOR_UNCONFIRMED;
         }
         if (index.column() == Amount && (rec->credit + rec->debit) < 0) {

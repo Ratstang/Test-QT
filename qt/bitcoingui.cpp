@@ -1,6 +1,7 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2015-2017 The PIVX developers
+// Copyright (c) 2018 The Lobstex developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -31,6 +32,7 @@
 
 #include "init.h"
 #include "masternodelist.h"
+#include "masternodelistall.h"
 #include "ui_interface.h"
 #include "util.h"
 
@@ -80,6 +82,7 @@ BitcoinGUI::BitcoinGUI(const NetworkStyle* networkStyle, QWidget* parent) : QMai
                                                                             overviewAction(0),
                                                                             historyAction(0),
                                                                             masternodeAction(0),
+                                                                            masternodeAllAction(0),
                                                                             quitAction(0),
                                                                             sendCoinsAction(0),
                                                                             usedSendingAddressesAction(0),
@@ -116,7 +119,7 @@ BitcoinGUI::BitcoinGUI(const NetworkStyle* networkStyle, QWidget* parent) : QMai
 
     GUIUtil::restoreWindowGeometry("nWindow", QSize(850, 550), this);
 
-    QString windowTitle = tr("GenesisX Core") + " - ";
+    QString windowTitle = tr("Lobstex Core") + " - ";
 #ifdef ENABLE_WALLET
     /* if compiled with wallet support, -disablewallet can still disable the wallet */
     enableWallet = !GetBoolArg("-disablewallet", false);
@@ -189,10 +192,12 @@ BitcoinGUI::BitcoinGUI(const NetworkStyle* networkStyle, QWidget* parent) : QMai
     unitDisplayControl = new UnitDisplayStatusBarControl();
     labelStakingIcon = new QLabel();
     labelEncryptionIcon = new QPushButton();
+    labelEncryptionIcon->setObjectName("labelEncryptionIcon");
     labelEncryptionIcon->setFlat(true); // Make the button look like a label, but clickable
     labelEncryptionIcon->setStyleSheet(".QPushButton { background-color: rgba(255, 255, 255, 0);}");
     labelEncryptionIcon->setMaximumSize(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE);
     labelConnectionsIcon = new QPushButton();
+    labelConnectionsIcon->setObjectName("labelConnectionsIcon");
     labelConnectionsIcon->setFlat(true); // Make the button look like a label, but clickable
     labelConnectionsIcon->setStyleSheet(".QPushButton { background-color: rgba(255, 255, 255, 0);}");
     labelConnectionsIcon->setMaximumSize(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE);
@@ -215,6 +220,7 @@ BitcoinGUI::BitcoinGUI(const NetworkStyle* networkStyle, QWidget* parent) : QMai
     // Progress bar and label for blocks download
     progressBarLabel = new QLabel();
     progressBarLabel->setVisible(true);
+    progressBarLabel->setObjectName("progressBarLabel");
     progressBar = new GUIUtil::ProgressBar();
     progressBar->setAlignment(Qt::AlignCenter);
     progressBar->setVisible(true);
@@ -299,7 +305,7 @@ void BitcoinGUI::createActions(const NetworkStyle* networkStyle)
     tabGroup->addAction(overviewAction);
 
     sendCoinsAction = new QAction(QIcon(":/icons/send"), tr("&Send"), this);
-    sendCoinsAction->setStatusTip(tr("Send coins to a GenesisX address"));
+    sendCoinsAction->setStatusTip(tr("Send coins to a Lobstex address"));
     sendCoinsAction->setToolTip(sendCoinsAction->statusTip());
     sendCoinsAction->setCheckable(true);
 #ifdef Q_OS_MAC
@@ -310,7 +316,7 @@ void BitcoinGUI::createActions(const NetworkStyle* networkStyle)
     tabGroup->addAction(sendCoinsAction);
 
     receiveCoinsAction = new QAction(QIcon(":/icons/receiving_addresses"), tr("&Receive"), this);
-    receiveCoinsAction->setStatusTip(tr("Request payments (generates QR codes and genesisx: URIs)"));
+    receiveCoinsAction->setStatusTip(tr("Request payments (generates QR codes and lobstex: URIs)"));
     receiveCoinsAction->setToolTip(receiveCoinsAction->statusTip());
     receiveCoinsAction->setCheckable(true);
 #ifdef Q_OS_MAC
@@ -332,7 +338,7 @@ void BitcoinGUI::createActions(const NetworkStyle* networkStyle)
     tabGroup->addAction(historyAction);
 
     privacyAction = new QAction(QIcon(":/icons/privacy"), tr("&Privacy"), this);
-    privacyAction->setStatusTip(tr("Privacy Actions for zXGS"));
+    privacyAction->setStatusTip(tr("Privacy Actions for zLOBS"));
     privacyAction->setToolTip(privacyAction->statusTip());
     privacyAction->setCheckable(true);
 #ifdef Q_OS_MAC
@@ -347,18 +353,29 @@ void BitcoinGUI::createActions(const NetworkStyle* networkStyle)
     QSettings settings;
     if (settings.value("fShowMasternodesTab").toBool()) {
         masternodeAction = new QAction(QIcon(":/icons/masternodes"), tr("&Masternodes"), this);
-        masternodeAction->setStatusTip(tr("Browse masternodes"));
+        masternodeAction->setStatusTip(tr("Browse your masternodes"));
         masternodeAction->setToolTip(masternodeAction->statusTip());
         masternodeAction->setCheckable(true);
-#ifdef Q_OS_MAC
-        masternodeAction->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_6));
-#else
-        masternodeAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_6));
-#endif
-        tabGroup->addAction(masternodeAction);
-        connect(masternodeAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
-        connect(masternodeAction, SIGNAL(triggered()), this, SLOT(gotoMasternodePage()));
-    }
+
+        masternodeAllAction = new QAction(QIcon(":/icons/masternodesall"), tr("&Masternodes Net"), this);
+        masternodeAllAction->setStatusTip(tr("Browse all masternodes"));
+        masternodeAllAction->setToolTip(masternodeAllAction->statusTip());
+        masternodeAllAction->setCheckable(true);
+
+        #ifdef Q_OS_MAC
+              masternodeAction->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_6));
+              masternodeAllAction->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_7));
+        #else
+              masternodeAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_6));
+              masternodeAllAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_7));
+        #endif
+              tabGroup->addAction(masternodeAction);
+              tabGroup->addAction(masternodeAllAction);
+              connect(masternodeAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+              connect(masternodeAction, SIGNAL(triggered()), this, SLOT(gotoMasternodePage()));
+              connect(masternodeAllAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+              connect(masternodeAllAction, SIGNAL(triggered()), this, SLOT(gotoMasternodeAllPage()));
+          }
 
     // These showNormalIfMinimized are needed because Send Coins and Receive Coins
     // can be triggered from the tray menu, and need to show the GUI to be useful.
@@ -378,8 +395,8 @@ void BitcoinGUI::createActions(const NetworkStyle* networkStyle)
     quitAction->setStatusTip(tr("Quit application"));
     quitAction->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_Q));
     quitAction->setMenuRole(QAction::QuitRole);
-    aboutAction = new QAction(networkStyle->getAppIcon(), tr("&About GenesisX Core"), this);
-    aboutAction->setStatusTip(tr("Show information about GenesisX Core"));
+    aboutAction = new QAction(networkStyle->getAppIcon(), tr("&About Lobstex Core"), this);
+    aboutAction->setStatusTip(tr("Show information about Lobstex Core"));
     aboutAction->setMenuRole(QAction::AboutRole);
 #if QT_VERSION < 0x050000
     aboutQtAction = new QAction(QIcon(":/trolltech/qmessagebox/images/qtlogo-64.png"), tr("About &Qt"), this);
@@ -389,7 +406,7 @@ void BitcoinGUI::createActions(const NetworkStyle* networkStyle)
     aboutQtAction->setStatusTip(tr("Show information about Qt"));
     aboutQtAction->setMenuRole(QAction::AboutQtRole);
     optionsAction = new QAction(QIcon(":/icons/options"), tr("&Options..."), this);
-    optionsAction->setStatusTip(tr("Modify configuration options for GenesisX"));
+    optionsAction->setStatusTip(tr("Modify configuration options for Lobstex"));
     optionsAction->setMenuRole(QAction::PreferencesRole);
     toggleHideAction = new QAction(networkStyle->getAppIcon(), tr("&Show / Hide"), this);
     toggleHideAction->setStatusTip(tr("Show or hide the main Window"));
@@ -405,9 +422,9 @@ void BitcoinGUI::createActions(const NetworkStyle* networkStyle)
     unlockWalletAction->setToolTip(tr("Unlock wallet"));
     lockWalletAction = new QAction(tr("&Lock Wallet"), this);
     signMessageAction = new QAction(QIcon(":/icons/edit"), tr("Sign &message..."), this);
-    signMessageAction->setStatusTip(tr("Sign messages with your GenesisX addresses to prove you own them"));
+    signMessageAction->setStatusTip(tr("Sign messages with your Lobstex addresses to prove you own them"));
     verifyMessageAction = new QAction(QIcon(":/icons/transaction_0"), tr("&Verify message..."), this);
-    verifyMessageAction->setStatusTip(tr("Verify messages to ensure they were signed with specified GenesisX addresses"));
+    verifyMessageAction->setStatusTip(tr("Verify messages to ensure they were signed with specified Lobstex addresses"));
     bip38ToolAction = new QAction(QIcon(":/icons/key"), tr("&BIP38 tool"), this);
     bip38ToolAction->setToolTip(tr("Encrypt and decrypt private keys using a passphrase"));
     multiSendAction = new QAction(QIcon(":/icons/edit"), tr("&MultiSend"), this);
@@ -444,13 +461,13 @@ void BitcoinGUI::createActions(const NetworkStyle* networkStyle)
     multisigSignAction->setStatusTip(tr("Sign with a multisignature address"));
 
     openAction = new QAction(QApplication::style()->standardIcon(QStyle::SP_FileIcon), tr("Open &URI..."), this);
-    openAction->setStatusTip(tr("Open a GenesisX: URI or payment request"));
+    openAction->setStatusTip(tr("Open a Lobstex: URI or payment request"));
     openBlockExplorerAction = new QAction(QIcon(":/icons/explorer"), tr("&Blockchain explorer"), this);
     openBlockExplorerAction->setStatusTip(tr("Block explorer window"));
 
     showHelpMessageAction = new QAction(QApplication::style()->standardIcon(QStyle::SP_MessageBoxInformation), tr("&Command-line options"), this);
     showHelpMessageAction->setMenuRole(QAction::NoRole);
-    showHelpMessageAction->setStatusTip(tr("Show the GenesisX Core help message to get a list with possible GenesisX command-line options"));
+    showHelpMessageAction->setStatusTip(tr("Show the Lobstex Core help message to get a list with possible Lobstex command-line options"));
 
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(aboutClicked()));
@@ -463,7 +480,7 @@ void BitcoinGUI::createActions(const NetworkStyle* networkStyle)
         connect(encryptWalletAction, SIGNAL(triggered(bool)), walletFrame, SLOT(encryptWallet(bool)));
         connect(backupWalletAction, SIGNAL(triggered()), walletFrame, SLOT(backupWallet()));
         connect(changePassphraseAction, SIGNAL(triggered()), walletFrame, SLOT(changePassphrase()));
-        connect(unlockWalletAction, SIGNAL(triggered()), walletFrame, SLOT(unlockWallet()));
+        connect(unlockWalletAction, SIGNAL(triggered(bool)), walletFrame, SLOT(unlockWallet(bool)));
         connect(lockWalletAction, SIGNAL(triggered()), walletFrame, SLOT(lockWallet()));
         connect(signMessageAction, SIGNAL(triggered()), this, SLOT(gotoSignMessageTab()));
         connect(verifyMessageAction, SIGNAL(triggered()), this, SLOT(gotoVerifyMessageTab()));
@@ -543,35 +560,73 @@ void BitcoinGUI::createMenuBar()
 void BitcoinGUI::createToolBars()
 {
     if (walletFrame) {
+
         QToolBar* toolbar = new QToolBar(tr("Tabs toolbar"));
         toolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        toolbar->setOrientation(Qt::Vertical);
+
+        QLabel* header = new QLabel();
+        header->setMinimumSize(260, 260);
+        header->setMaximumSize(260, 260);
+        header->setAlignment(Qt::AlignTop);
+        header->setStyleSheet("background-color:transparent;");
+        header->setPixmap(QPixmap(":/images/header"));
+        header->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+
+        toolbar->addWidget(header);
+
+        QWidget *spacerWidget = new QWidget();
+        spacerWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        spacerWidget->setMinimumSize(260, 15);
+        spacerWidget->setMaximumSize(260, 1400);
+        spacerWidget->setVisible(true);
+        spacerWidget->setStyleSheet("background-color:transparent;");
+
+        toolbar->addWidget(spacerWidget);
+
         toolbar->addAction(overviewAction);
         toolbar->addAction(sendCoinsAction);
         toolbar->addAction(receiveCoinsAction);
         toolbar->addAction(privacyAction);
         toolbar->addAction(historyAction);
         toolbar->addAction(privacyAction);
+
+        toolbar->setIconSize(QSize(260, 29));
+
         QSettings settings;
         if (settings.value("fShowMasternodesTab").toBool()) {
+            toolbar->addAction(masternodeAllAction);
             toolbar->addAction(masternodeAction);
+
         }
         toolbar->setMovable(false); // remove unused icon in upper left corner
         overviewAction->setChecked(true);
 
+        QWidget *spacerWidget2 = new QWidget();
+        spacerWidget2->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        spacerWidget2->setMaximumSize(260, 1400);
+        spacerWidget2->setMinimumSize(260, 30);
+        spacerWidget2->setVisible(true);
+        spacerWidget2->setStyleSheet("background-color:transparent;");
+
+        toolbar->addWidget(spacerWidget2);
+
         /** Create additional container for toolbar and walletFrame and make it the central widget.
             This is a workaround mostly for toolbar styling on Mac OS but should work fine for every other OSes too.
         */
-        QVBoxLayout* layout = new QVBoxLayout;
+        QHBoxLayout* layout = new QHBoxLayout;
         layout->addWidget(toolbar);
         layout->addWidget(walletFrame);
         layout->setSpacing(0);
         layout->setContentsMargins(QMargins());
+
         QWidget* containerWidget = new QWidget();
         containerWidget->setLayout(layout);
         setCentralWidget(containerWidget);
-    }
-}
 
+    }
+
+}
 void BitcoinGUI::setClientModel(ClientModel* clientModel)
 {
     this->clientModel = clientModel;
@@ -600,6 +655,12 @@ void BitcoinGUI::setClientModel(ClientModel* clientModel)
         }
 #endif // ENABLE_WALLET
         unitDisplayControl->setOptionsModel(clientModel->getOptionsModel());
+
+        //Show trayIcon
+        if (trayIcon)
+        {
+          trayIcon->show();
+        }
     } else {
         // Disable possibility to show main window via action
         toggleHideAction->setEnabled(false);
@@ -645,6 +706,7 @@ void BitcoinGUI::setWalletActionsEnabled(bool enabled)
     QSettings settings;
     if (settings.value("fShowMasternodesTab").toBool()) {
         masternodeAction->setEnabled(enabled);
+        masternodeAllAction->setEnabled(enabled);
     }
     encryptWalletAction->setEnabled(enabled);
     backupWalletAction->setEnabled(enabled);
@@ -664,10 +726,10 @@ void BitcoinGUI::createTrayIcon(const NetworkStyle* networkStyle)
 {
 #ifndef Q_OS_MAC
     trayIcon = new QSystemTrayIcon(this);
-    QString toolTip = tr("GenesisX Core client") + " " + networkStyle->getTitleAddText();
+    QString toolTip = tr("Lobstex Core client") + " " + networkStyle->getTitleAddText();
     trayIcon->setToolTip(toolTip);
     trayIcon->setIcon(networkStyle->getAppIcon());
-    trayIcon->show();
+    trayIcon->hide();
 #endif
 
     notificator = new Notificator(QApplication::applicationName(), trayIcon, this);
@@ -787,6 +849,15 @@ void BitcoinGUI::gotoMasternodePage()
     }
 }
 
+void BitcoinGUI::gotoMasternodeAllPage()
+{
+    QSettings settings;
+    if (settings.value("fShowMasternodesTab").toBool()) {
+        masternodeAllAction->setChecked(true);
+        if (walletFrame) walletFrame->gotoMasternodeAllPage();
+    }
+}
+
 void BitcoinGUI::gotoReceiveCoinsPage()
 {
     receiveCoinsAction->setChecked(true);
@@ -876,7 +947,7 @@ void BitcoinGUI::setNumConnections(int count)
     }
     QIcon connectionItem = QIcon(icon).pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE);
     labelConnectionsIcon->setIcon(connectionItem);
-    labelConnectionsIcon->setToolTip(tr("%n active connection(s) to GenesisX network", "", count));
+    labelConnectionsIcon->setToolTip(tr("%n active connection(s) to Lobstex network", "", count));
 }
 
 void BitcoinGUI::setNumBlocks(int count)
@@ -1006,7 +1077,7 @@ void BitcoinGUI::setNumBlocks(int count)
 
 void BitcoinGUI::message(const QString& title, const QString& message, unsigned int style, bool* ret)
 {
-    QString strTitle = tr("GenesisX Core"); // default title
+    QString strTitle = tr("Lobstex Core"); // default title
     // Default to information icon
     int nMBoxIcon = QMessageBox::Information;
     int nNotifyIcon = Notificator::Information;
@@ -1031,7 +1102,7 @@ void BitcoinGUI::message(const QString& title, const QString& message, unsigned 
             break;
         }
     }
-    // Append title to "GenesisX - "
+    // Append title to "Lobstex - "
     if (!msgType.isEmpty())
         strTitle += " - " + msgType;
 
@@ -1190,7 +1261,7 @@ void BitcoinGUI::setEncryptionStatus(int status)
     case WalletModel::UnlockedForAnonymizationOnly:
         labelEncryptionIcon->show();
         labelEncryptionIcon->setIcon(QIcon(":/icons/lock_open").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
-        labelEncryptionIcon->setToolTip(tr("Wallet is <b>encrypted</b> and currently <b>unlocked</b> for anonimization and staking only"));
+        labelEncryptionIcon->setToolTip(tr("Wallet is <b>encrypted</b> and currently <b>unlocked</b> for anonymization and staking only"));
         encryptWalletAction->setChecked(true);
         changePassphraseAction->setEnabled(true);
         unlockWalletAction->setVisible(true);
@@ -1311,7 +1382,7 @@ void UnitDisplayStatusBarControl::mousePressEvent(QMouseEvent* event)
     onDisplayUnitsClicked(event->pos());
 }
 
-/** Creates context menu, its actions, and genesisxs up all the relevant signals for mouse events. */
+/** Creates context menu, its actions, and wires up all the relevant signals for mouse events. */
 void UnitDisplayStatusBarControl::createContextMenu()
 {
     menu = new QMenu();
